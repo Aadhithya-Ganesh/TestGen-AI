@@ -1,0 +1,28 @@
+services:
+  api-service:
+    build: ./Backend
+    env_file:
+      - ./Backend/.env
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')",
+        ]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    ports:
+      - 8080:8080
+    networks:
+      - backend
+      - frontend
+    volumes:
+      - ./Backend/app:/app/app
+
+networks:
+  backend:
+  frontend:
