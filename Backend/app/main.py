@@ -2,6 +2,9 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routes.auth import router as auth_router
+from app.routes.analyze import router as analyze_router
+from app.database import get_db_health
 
 
 logging.basicConfig(
@@ -16,6 +19,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # 🔹 STARTUP
     logger.info("Starting TestGen AI API...")
+    get_db_health()
 
     yield
 
@@ -37,8 +41,17 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     """Health check endpoint - used by load balancer"""
+    db_health = get_db_health()
+
+    is_healthy = db_health["status"] == "connected"
 
     return {
-        "status": "healthy"
+        "status": "healthy" if is_healthy else "unhealthy",
+        "checks": {
+            "database": db_health["status"],
+        },
     }
 
+
+app.include_router(auth_router)
+app.include_router(analyze_router)

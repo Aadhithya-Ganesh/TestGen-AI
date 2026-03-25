@@ -23,6 +23,38 @@ services:
     volumes:
       - ./Backend/app:/app/app
 
+  celery-worker:
+    build: ./Backend
+    command: celery -A app.celery_worker worker --loglevel=WARNING --concurrency=5
+    container_name: celery-worker
+    networks:
+      - backend
+    env_file:
+      - ./Backend/.env
+
+  redis:
+    container_name: redis-db
+    image: redis:8-alpine
+    networks:
+      - backend
+    volumes:
+      - redis-data:/data
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - backend
+
+volumes:
+  redis-data:
+
 networks:
   backend:
   frontend:
