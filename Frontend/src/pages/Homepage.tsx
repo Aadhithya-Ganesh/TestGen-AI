@@ -34,6 +34,16 @@ function Homepage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      window.location.assign(
+        `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}`,
+      );
+      return;
+    }
+
     const formdata = new FormData(e.currentTarget);
     const repo_url = formdata.get("url");
 
@@ -48,8 +58,6 @@ function Homepage() {
         language: String(selected),
       },
     }).then((response) => response.json());
-
-    console.log(data);
   };
 
   return (

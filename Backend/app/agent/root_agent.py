@@ -1,37 +1,28 @@
-from google.adk.agents.llm_agent import Agent
-from app.agent.tools.get_weather import get_weather
-import os
-from google.adk.models.lite_llm import LiteLlm
+from google.adk.agents.sequential_agent import SequentialAgent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 import asyncio
 from google.genai import types
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from app.agent.docker_agent import docker_agent
+from app.agent.git_agent import git_agent
 
 MODEL_GPT_4_MINI = "openai/gpt-4.1-mini"
 
-APP_NAME = "weather_tutorial_app"
+APP_NAME = "testgen_app"
 USER_ID = "user_1"
 SESSION_ID = "session_001"
 
 
 def create_agent():
-    weather_agent = Agent(
-        name="weather_agent_v1",
-        model=LiteLlm(model=MODEL_GPT_4_MINI),
-        description="Provides weather information for specific cities.",
-        instruction="You are a helpful weather assistant. "
-        "When the user asks for the weather in a specific city, "
-        "use the 'get_weather' tool to find the information. "
-        "If the tool returns an error, inform the user politely. "
-        "If the tool is successful, present the weather report clearly.",
-        tools=[get_weather],
+    test_gen_agent = SequentialAgent(
+        name="test_gen_pipeline_agent",
+        sub_agents=[docker_agent, git_agent],  # type: ignore
+        description="Executes a sequence of tasks using Docker and Git agents to create repositories and run containers based on user queries.",
     )
 
-    print(f"Agent '{weather_agent.name}' created using model '{MODEL_GPT_4_MINI}'.")
+    print(f"Agent '{test_gen_agent.name}' created using model '{MODEL_GPT_4_MINI}'.")
 
-    return weather_agent
+    return test_gen_agent
 
 
 async def init_session(
@@ -63,7 +54,9 @@ async def call_agent_async(query: str, runner, user_id, session_id):
         user_id=user_id, session_id=session_id, new_message=content
     ):
         # You can uncomment the line below to see *all* events during execution
-        # print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
+        print(
+            f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}"
+        )
 
         # Key Concept: is_final_response() marks the concluding message for the turn.
         if event.is_final_response():
@@ -77,12 +70,11 @@ async def call_agent_async(query: str, runner, user_id, session_id):
                     f"Agent escalated: {event.error_message or 'No specific message.'}"
                 )
             # Add more checks here if needed (e.g., specific error codes)
-            break  # Stop processing events once the final response is found
 
     print(f"<<< Agent Response: {final_response_text}")
 
 
-def call_agent():
+def call_agent(repo, language, github_token):
     agent = create_agent()
     session = asyncio.run(init_session(APP_NAME, USER_ID, SESSION_ID))
 
@@ -96,18 +88,7 @@ def call_agent():
 
     async def run_conversation():
         await call_agent_async(
-            "What is the weather like in London?",
-            runner=runner,
-            user_id=USER_ID,
-            session_id=SESSION_ID,
-        )
-
-        await call_agent_async(
-            "How about Paris?", runner=runner, user_id=USER_ID, session_id=SESSION_ID
-        )  # Expecting the tool's error message
-
-        await call_agent_async(
-            "Tell me the weather in New York",
+            query=f"Analyze the repository: {repo} with language: {language}. GitHub token: {github_token}",
             runner=runner,
             user_id=USER_ID,
             session_id=SESSION_ID,

@@ -22,15 +22,18 @@ services:
       - frontend
     volumes:
       - ./Backend/app:/app/app
+      - /var/run/docker.sock:/var/run/docker.sock
 
   celery-worker:
     build: ./Backend
-    command: celery -A app.celery_worker worker --loglevel=WARNING --concurrency=5
+    command: uv run celery -A app.celery_worker worker --loglevel=WARNING --concurrency=5
     container_name: celery-worker
     networks:
       - backend
     env_file:
       - ./Backend/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
   redis:
     container_name: redis-db
