@@ -1,3 +1,5 @@
+import os
+
 import docker
 import json
 
@@ -17,26 +19,29 @@ def generate_folder_structure(container_id: str, folder_path: str) -> dict:
     """
     container = client.containers.get(container_id)
 
-    # Use find to get all files and dirs
     exit_code, output = container.exec_run(
-        f"find {folder_path} -not -path '*/.git/*' -not -name '.git'"
+        f"find {folder_path} -type f -not -path '*/.git/*'"
     )
 
     if exit_code != 0:
-        return {"error": f"Failed to scan folder: {output.decode()}"}
+        return {"error": output.decode()}
 
     paths = output.decode().strip().split("\n")
-    paths = [p for p in paths if p and p != folder_path]
 
-    # Build nested dict from paths
-    structure = {}
+    files = []
     for path in paths:
-        relative = path.replace(folder_path, "").lstrip("/")
-        parts = relative.split("/")
-        current = structure
-        for part in parts:
-            if part not in current:
-                current[part] = {}
-            current = current[part]
+        path = path.strip()
 
-    return structure
+        if not path:
+            continue
+
+        # ✅ robust relative path
+        relative = os.path.relpath(path, folder_path)
+
+        # skip weird results
+        if relative.startswith(".."):
+            continue
+
+        files.append(relative)
+
+    return {"files": files}

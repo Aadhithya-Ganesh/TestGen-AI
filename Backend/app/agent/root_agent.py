@@ -1,10 +1,12 @@
 from google.adk.agents.sequential_agent import SequentialAgent
+from google.adk.agents.loop_agent import LoopAgent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 import asyncio
 from google.genai import types
 from app.agent.docker_agent import docker_agent
 from app.agent.git_agent import git_agent
+from app.agent.code_orchestrator import code_orchestrator_agent
 
 MODEL_GPT_4_MINI = "openai/gpt-4.1-mini"
 
@@ -14,9 +16,16 @@ SESSION_ID = "session_001"
 
 
 def create_agent():
+    orchestrator_loop = LoopAgent(
+        name="orchestrator_loop",
+        sub_agents=[code_orchestrator_agent],  # type: ignore
+        max_iterations=3,
+        description="A loop agent that continuously calls the code orchestrator until stopping conditions are met.",
+    )
+
     test_gen_agent = SequentialAgent(
         name="test_gen_pipeline_agent",
-        sub_agents=[docker_agent, git_agent],  # type: ignore
+        sub_agents=[docker_agent, git_agent, orchestrator_loop],  # type: ignore
         description="Executes a sequence of tasks using Docker and Git agents to create repositories and run containers based on user queries.",
     )
 
@@ -30,7 +39,13 @@ async def init_session(
 ) -> InMemorySessionService:
     session_service = InMemorySessionService()
     await session_service.create_session(
-        app_name=app_name, user_id=user_id, session_id=session_id
+        app_name=app_name,
+        user_id=user_id,
+        session_id=session_id,
+        state={
+            "code_runner_response": "",  # initialize empty
+            "code_modify_response": "",  # initialize empty
+        },
     )
     print(
         f"Session created: App='{app_name}', User='{user_id}', Session='{session_id}'"
@@ -69,6 +84,7 @@ async def call_agent_async(query: str, runner, user_id, session_id):
                 final_response_text = (
                     f"Agent escalated: {event.error_message or 'No specific message.'}"
                 )
+
             # Add more checks here if needed (e.g., specific error codes)
 
     print(f"<<< Agent Response: {final_response_text}")
