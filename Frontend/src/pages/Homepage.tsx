@@ -8,6 +8,8 @@ import { useState } from "react";
 import Button from "../components/ui/Button";
 import { apiFetch } from "../utils/Fetch";
 import Cards from "../components/Cards";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 function Homepage() {
   const {
@@ -18,6 +20,7 @@ function Homepage() {
   } = useInput("", validateGithubRepoUrl);
 
   const [selected, setSelected] = useState<string>("");
+  const navigate = useNavigate();
 
   const languages = [
     { label: "Python", value: "python" },
@@ -51,13 +54,26 @@ function Homepage() {
       return;
     }
 
-    const data = await apiFetch("/api/analyze", {
-      method: "POST",
-      params: {
-        repo_url: String(repo_url),
-        language: String(selected),
-      },
-    }).then((response) => response.json());
+    try {
+      const data = await apiFetch("/api/analyze", {
+        method: "POST",
+        params: {
+          repo_url: String(repo_url),
+          language: String(selected),
+        },
+      }).then((response) => response.json());
+
+      navigate(`/jobs/${data.job_id}`);
+    } catch (error) {
+      if (error instanceof Response) {
+        const res = await error.json();
+        toast.error(
+          res.message || "An error occurred while analyzing the repository.",
+        );
+      } else {
+        toast.error("An error occurred while analyzing the repository.");
+      }
+    }
   };
 
   return (

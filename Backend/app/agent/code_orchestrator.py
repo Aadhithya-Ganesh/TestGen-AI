@@ -3,6 +3,7 @@ from google.adk.models.lite_llm import LiteLlm
 from app.agent.code_analysis_agent import code_analysis_agent
 from app.agent.code_modify_agent import code_modify_agent
 from app.agent.code_runner_agent import code_runner_agent
+from app.agent.tools.code.update_db import update_job
 
 MODEL_GPT_4_MINI = (
     "openai/gpt-4.1-mini"  # Placeholder for GPT-5 model name when available
@@ -64,7 +65,34 @@ try:
             - has tests and you dont know coverage = true → call code_runner_agent
             - has_tests and coverage < 80% = true → call code_modify_agent
             - If you just wrote tests or improved them → call code_runner_agent to check results
-            - iterations >= 3 → Just report back the current results and stop
+            - iterations >= 5 → Just report back the current results and stop
+
+            When you call the subagents to do their tasks and when they reply you back the with results, you must call the update_job tool to update the database with the latest information. 
+            This is CRITICAL to ensure the system has the most up-to-date information on the job status.
+            When you get info about the files that are changes, add that to the files field with file name as key and the content that you wrote as the value. This will help us keep track of what changes were made to the codebase during the process.
+            This is the Schema.
+
+            {
+                "job_id": job_id,
+                "user_id": user["github_id"],
+                "repo_url": repo_url,
+                "language": language,
+                "containerCreated": False,
+                "repoCloned": False,
+                "analysisComplete": False,
+                "initialCoverage": None,
+                "currentCoverage": None,
+                "finalCoverage": None,
+                "files": object,
+                "created_at": datetime.now(timezone.utc),
+            }
+
+            For example,
+            1. If there are test cases, Run them and get coverage and set initialCoverage and currentCoverage to the same value. Then if coverage is less than 80%, call code_modify_agent to improve tests. After that call code_runner_agent again to check coverage and set currentCoverage to the new value. Repeat this until you have >80% coverage or you exhaust 5 iterations.
+            2. If there are no test cases, call code_modify_agent to generate tests. After that call code_runner_agent to run them and get coverage. Set initialCoverage to 0 and
+            currentCoverage to the new value. If coverage is less than 80%, call code_modify_agent again to improve tests. After that call code_runner_agent again to check coverage and set currentCoverage to the new value. Repeat this until you have >80% coverage or you exhaust 5 iterations.
+            3. If at any point you exhaust 5 iterations, just report back the current coverage and test results without calling any more agents.
+            4. When you are done with everything, Update the analysisComplete field to True and finalCoverage to the latest coverage value.
 
             Final output format (STRICT):
             {
@@ -77,6 +105,7 @@ try:
         """,
         description="Orchestrates code analysis, test generation, and test execution agents dynamically to maximize test coverage.",
         output_key="code_orchestrator_response",
+        tools=[update_job],  # type: ignore
         sub_agents=[code_analysis_agent, code_modify_agent, code_runner_agent],  # type: ignore
     )
     print(

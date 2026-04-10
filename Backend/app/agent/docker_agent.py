@@ -1,6 +1,7 @@
 from google.adk.agents.llm_agent import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
 from app.agent.tools.docker.run_container import run_container
+from app.agent.tools.code.update_db import update_job
 
 
 MODEL_GPT_4_MINI = "openai/gpt-4.1-mini"
@@ -27,9 +28,28 @@ try:
             Output format (STRICT):
             {
             "container_id": "<id>"
-            }""",
+            }
+            
+            Once you finish running the container, use the update_job tool to update the containerCreated field to True.
+            This is the Schema.
+
+            {
+                "job_id": job_id,
+                "user_id": user["github_id"],
+                "repo_url": repo_url,
+                "language": language,
+                "containerCreated": False,
+                "repoCloned": False,
+                "analysisComplete": False,
+                "initialCoverage": None,
+                "currentCoverage": None,
+                "finalCoverage": None,
+                "files": [],
+                "created_at": datetime.now(timezone.utc),
+            }
+            """,
         description="Handlers Docker-related tasks with run_container and stop_container tools.",  # Crucial for delegation
-        tools=[run_container],
+        tools=[run_container, update_job],
         output_key="docker_response",  # This is the key that will be used to pass the response to the orchestrator
     )
     print(f"✅ Agent '{docker_agent.name}' created using model '{docker_agent.model}'.")

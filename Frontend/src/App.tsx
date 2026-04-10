@@ -4,8 +4,8 @@ import RootPage from "./pages/RootPage";
 import NotFound from "./pages/NotFound";
 import Homepage from "./pages/Homepage";
 import NavbarLayout from "./pages/NavbarLayout";
-import Dashboard from "./pages/Dashboard";
-import History from "./pages/History";
+import Job from "./pages/Job";
+import Jobs, { loader as jobsLoader } from "./pages/Jobs";
 import { authLoader, optionalAuthLoader } from "./pages/Auth";
 
 function App() {
@@ -27,12 +27,13 @@ function App() {
               loader: authLoader,
               children: [
                 {
-                  path: "dashboard",
-                  element: <Dashboard />,
+                  path: "jobs/:jobId",
+                  element: <Job />,
                 },
                 {
-                  path: "history",
-                  element: <History />,
+                  path: "jobs",
+                  element: <Jobs />,
+                  loader: jobsLoader,
                 },
               ],
             },

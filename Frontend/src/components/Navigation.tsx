@@ -4,8 +4,7 @@ import { GalleryHorizontalEnd, Home, LayoutDashboard } from "lucide-react";
 function Navigation() {
   const navItems = [
     { icon: Home, label: "Home", path: "/" },
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: GalleryHorizontalEnd, label: "History", path: "/history" },
+    { icon: GalleryHorizontalEnd, label: "Jobs", path: "/jobs" },
   ];
 
   return (

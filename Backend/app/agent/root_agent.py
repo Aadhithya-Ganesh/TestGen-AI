@@ -19,7 +19,7 @@ def create_agent():
     orchestrator_loop = LoopAgent(
         name="orchestrator_loop",
         sub_agents=[code_orchestrator_agent],  # type: ignore
-        max_iterations=3,
+        max_iterations=5,
         description="A loop agent that continuously calls the code orchestrator until stopping conditions are met.",
     )
 
@@ -90,7 +90,7 @@ async def call_agent_async(query: str, runner, user_id, session_id):
     print(f"<<< Agent Response: {final_response_text}")
 
 
-def call_agent(repo, language, github_token):
+def call_agent(job_id, repo, language, github_token, user_id):
     agent = create_agent()
     session = asyncio.run(init_session(APP_NAME, USER_ID, SESSION_ID))
 
@@ -104,7 +104,7 @@ def call_agent(repo, language, github_token):
 
     async def run_conversation():
         await call_agent_async(
-            query=f"Analyze the repository: {repo} with language: {language}. GitHub token: {github_token}",
+            query=f"This is the job {job_id}: Analyze the repository: {repo} with language: {language}. GitHub token: {github_token}",
             runner=runner,
             user_id=USER_ID,
             session_id=SESSION_ID,

@@ -38,6 +38,10 @@ try:
             - DO NOT modify any files
             - DO NOT install any packages
             - ONLY valid JSON, no extra text
+
+            After returning results, ALWAYS transfer back to code_orchestrator_agent.
+            NEVER stop without transferring back.
+            The orchestrator needs your results to finalize the job.
         """,
         description="Runs tests inside the container and returns coverage results.",
         tools=[read_file, exec_command],

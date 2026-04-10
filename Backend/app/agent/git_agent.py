@@ -2,6 +2,7 @@ from google.adk.agents.llm_agent import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
 from app.agent.tools.git.clone_repo import clone_repo
 from app.agent.tools.git.generate_folder_structure import generate_folder_structure
+from app.agent.tools.code.update_db import update_job
 
 MODEL_GPT_4_MINI = "openai/gpt-4.1-mini"
 
@@ -35,9 +36,28 @@ try:
             - DO NOT include markdown
             - DO NOT include extra text
             - ONLY output JSON
+
+            Once you finish cloning the repository, use the update_job tool to update the repoCloned field to True.
+            This is the Schema.
+
+            {
+                "job_id": job_id,
+                "user_id": user["github_id"],
+                "repo_url": repo_url,
+                "language": language,
+                "containerCreated": False,
+                "repoCloned": False,
+                "analysisComplete": False,
+                "initialCoverage": None,
+                "currentCoverage": None,
+                "finalCoverage": None,
+                "files": [],
+                "created_at": datetime.now(timezone.utc),
+            }
+
             """,
         description="Handles GitHub operations like cloning repositories into a running container.",
-        tools=[clone_repo, generate_folder_structure],  # type: ignore
+        tools=[clone_repo, generate_folder_structure, update_job],  # type: ignore
         output_key="git_response",
     )
     print(f"✅ Agent '{git_agent.name}' created using model '{git_agent.model}'.")

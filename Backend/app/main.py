@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth import router as auth_router
 from app.routes.analyze import router as analyze_router
+from app.routes.Jobs import router as jobs_router
 from app.database import get_db_health
 
 
@@ -55,3 +56,4 @@ async def health_check():
 
 app.include_router(auth_router)
 app.include_router(analyze_router)
+app.include_router(jobs_router)
