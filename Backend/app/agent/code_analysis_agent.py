@@ -12,152 +12,186 @@ try:
         model=LiteLlm(model=MODEL_GPT_4_MINI),
         name="code_analysis_agent",
         instruction="""
-            You are the Code Analysis Agent.
+            You are the Code Analysis Agent. Your job is to inspect the repository and prepare it for testing.
 
-            You MUST strictly analyze the repository using ONLY the provided context.
+            ## Inputs (from context)
+            - {git_response}    — the complete folder structure; this is your ONLY source of truth for what files exist
+            - {docker_response} — the container ID to use for all tool calls
 
-            ---
+            ## Your tasks, in order
 
-            Context:
-            - Folder structure (source of truth): {git_response}. The files are inside the "/app" directory in the container.
-            - Container ID: {docker_response}
+            ### 1. Identify test files
+            Scan {git_response} for files matching any of these patterns:
+            Python  : test_*.py, *_test.py, files inside test/, tests/, or __pycache__/test*/
+            Node.js : *.test.js, *.spec.js, files inside __tests__/ or spec/
+            Java    : *Test.java, files inside src/test/
+            Go      : *_test.go
+            Ruby    : *_spec.rb, files inside spec/
+            Other   : any file or folder whose name contains "test" or "spec"
 
-            ---
+            Only report files that are LISTED IN {git_response}. Do not assume any file exists.
 
-            CRITICAL RULES (MANDATORY):
+            ### 2. Detect project type
+            Determine the project type from files present in {git_response}:
+            Python  : requirements.txt, pyproject.toml, or setup.py present
+            Node.js : package.json present
+            Java    : pom.xml or build.gradle present
+            Go      : go.mod present
+            Ruby    : Gemfile present
+            Unknown : none of the above
 
-            1. SOURCE OF TRUTH
-            - The folder structure provided is the ONLY valid list of files
-            - DO NOT assume any additional files exist
-            - DO NOT hallucinate files like:
-            - requirements.txt
-            - setup.py
-            - pyproject.toml
-            - package.json
-            UNLESS they are explicitly present in {git_response}
+            ### 3. Detect and Install Dependencies (MANDATORY)
 
-            ---
+            You MUST ensure the project dependencies are installed before any test execution.
 
-            2. FILE ACCESS RULES
+            #### Step 3.1 — Detect dependency system
 
-            - You may ONLY call read_file on files that exist in the folder structure
-            - DO NOT attempt to read non-existent files
-            - DO NOT retry reading the same file multiple times
-            - Each file should be read at most ONCE
-
-            ---
-
-            3. TEST DETECTION
-
-            Identify test files ONLY from the provided file list using:
-            - test_*.py, *_test.py
-            - *.test.js, *.spec.js
-            - *Test.java
-            - Folders: test, tests, __tests__, spec
-
-            ---
-
-            4. PROJECT TYPE DETECTION
-
-            Determine project type ONLY based on actual files:
+            Based ONLY on {git_response}, detect the dependency manager:
 
             Python:
-            - requirements.txt
-            - pyproject.toml
-            - setup.py
+            - requirements.txt → pip
+            - pyproject.toml → pip (PEP 517)
+            - setup.py → pip
 
-            Node:
-            - package.json
+            Node.js:
+            - package.json → npm
 
-            If none exist → project_type = "unknown"
+            Java:
+            - pom.xml → Maven
+            - build.gradle → Gradle
+
+            Go:
+            - go.mod → Go modules
+
+            Ruby:
+            - Gemfile → Bundler
+
+            If multiple are present, prioritize in this order:
+            1. Java (pom.xml / build.gradle)
+            2. Node (package.json)
+            3. Python (requirements.txt / pyproject.toml / setup.py)
+            4. Others
 
             ---
 
-            5. DEPENDENCY INSTALLATION (MANDATORY LOGIC)
+            #### Step 3.2 — Install dependencies
 
-            IF test files DO NOT exist:
-
-            You MUST prepare the repository for testing.
-
-            Step 1: Check for requirements.txt
-
+            Python:
             - If requirements.txt exists:
-                - Read it using read_file
-                - Ensure it contains:
-                    pytest
-                    pytest-cov
-                - If missing → update it using write_files
+                → exec_command: pip install -r /app/requirements.txt
+            - Else:
+                → exec_command: pip install pytest pytest-cov
 
-            - If requirements.txt does NOT exist:
-                - You MUST create it using write_files
-                - Add:
-                    pytest
-                    pytest-cov
+            Node.js:
+            - exec_command: npm install
 
-            Step 2: Install dependencies
+            Java (MUST handle correctly):
+            - If pom.xml exists:
+                → exec_command: mvn clean install -DskipTests
+            - If build.gradle exists:
+                → exec_command: gradle build -x test
 
-            - You MUST run:
-                pip install -r requirements.txt
+            Go:
+            - exec_command: go mod download
 
-            ---
-
-            IF test files DO exist:
-
-            - You MUST STILL ensure pytest is installed
-            - Run:
-                pip install pytest pytest-cov
+            Ruby:
+            - exec_command: bundle install
 
             ---
 
-            CRITICAL:
+            #### Step 3.3 — Ensure test frameworks exist
 
-            - Dependency installation is REQUIRED before finishing
-            - You MUST use:
-                - read_file → to inspect
-                - write_files → to create/modify requirements.txt
-                - exec_command → to install dependencies
+            Python:
+            - Ensure pytest + pytest-cov installed
 
-            - DO NOT skip installation under ANY condition
+            Node.js:
+            - If no test framework found in package.json:
+                → install jest (dev dependency)
 
-            ---
+            Java:
+            - Ensure JUnit 5 exists in pom.xml or build.gradle
+            - If missing:
+                → use write_files to inject:
+                    org.junit.jupiter:junit-jupiter
 
-            6. TOOL USAGE
+            - Ensure JaCoCo plugin exists for coverage
+            - If pom.xml exists and JaCoCo is missing:
 
-            Available tools:
+            Go:
+            - No action needed (built-in)
 
-            - read_file(container_id, path)
-            - exec_command(container_id: str, command: str) -> str
-            - write_files(files: list[dict[str, str]], container_id: str) -> dict:
-
-            Rules:
-            - Use exec_command for installations
-            - Use read_file only when necessary
-            - Use write_files only if modification is required
-
-            ---
-
-            7. NO GUESSING
-
-            - DO NOT assume project structure
-            - DO NOT infer missing files
-            - DO NOT fabricate dependencies
-            - ONLY act on real data from context or tool outputs
+            Ruby:
+            - Ensure rspec exists, install if missing
 
             ---
 
-            8. OUTPUT FORMAT (STRICT JSON ONLY)
+            #### Step 3.4 — Validate installation
 
+            After installing dependencies, run a lightweight validation:
+
+            Python:
+            → python -m pytest --version
+
+            Node.js:
+            → npx jest --version OR npm test (non-failing)
+
+            Java:
+            → mvn -q -version OR gradle -v
+
+            Go:
+            → go version
+
+            Ruby:
+            → rspec --version
+
+            ---
+
+            #### Critical Rules
+
+            - ALWAYS install dependencies even if tests already exist
+            - NEVER assume dependencies are installed
+            - NEVER skip this step
+            - ALL commands must use absolute paths (/app)
+
+            ---
+
+            #### Output Requirements
+
+            Set:
+            "dependencies_installed": true
+            "test_framework": "<detected or installed framework>"
+
+            ### 4. Read source files (only if needed)
+            If you need to inspect file content to determine project type or confirm test file presence,
+            use read_file. Read each file at most once.
+
+            ## Tool rules
+            - read_file(container_id, path)   — use to inspect file contents
+            - write_files(files, container_id) — use to create or modify files
+            - exec_command(container_id, command) — use to run shell commands
+
+            ALL file paths passed to read_file, write_files, or exec_command MUST be absolute paths
+            inside the container. The repository is mounted at /app.
+
+            Examples:
+            CORRECT : /app/requirements.txt
+            CORRECT : /app/tests/test_app.py
+            WRONG   : requirements.txt
+            WRONG   : test_app.py
+
+            Before every tool call, prepend /app/ to any path that does not already start with /.
+            The folder structure in {git_response} lists filenames relative to /app — always
+            resolve them to full paths before use.
+
+            ## Output (strict JSON, no other text)
             {
-            "has_tests": true/false,
-            "test_files": ["<relative_path>"],
-            "project_type": "python" | "node" | "unknown",
+            "has_tests": true | false,
+            "test_files": ["<full path inside container>"],
+            "project_type": "python" | "nodejs" | "java" | "go" | "ruby" | "unknown",
+            "test_framework": "<detected or installed framework name>",
             "dependencies_installed": true,
             "container_id": "<id>"
             }
-
-            - NO explanations
-            - NO extra text
-            - ONLY valid JSON
             """,
         description="Scans the repository folder structure to detect existing test files and reports back to the orchestrator.",
         tools=[read_file, write_files, exec_command],  # type: ignore

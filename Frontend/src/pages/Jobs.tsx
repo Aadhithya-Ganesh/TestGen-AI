@@ -24,34 +24,38 @@ function Jobs() {
                   </div>
                 </div>
               )}
-              {resolvedJobs.jobs.map((job: any) => (
-                <motion.div
-                  key={job.job_id}
-                  className="bg-card border-border rounded-2xl border p-5"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Link to={`/jobs/${job.job_id}`}>
-                    <div className="mx-2 flex items-center justify-between">
-                      <div className="flex flex-col gap-1">
-                        <p className="text-lg font-semibold">{job.repo_url}</p>
-                        <div className="text-muted-foreground flex items-center gap-3">
-                          <Clock className="size-4" />
-                          <p>{formatDate(job.created_at)}</p>
+              <div className="flex flex-col gap-2">
+                {resolvedJobs.jobs.map((job: any) => (
+                  <motion.div
+                    key={job.job_id}
+                    className="bg-card border-border rounded-2xl border p-5"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Link to={`/jobs/${job.job_id}`}>
+                      <div className="mx-2 flex items-center justify-between">
+                        <div className="flex flex-col gap-1">
+                          <p className="text-lg font-semibold">
+                            {job.repo_url}
+                          </p>
+                          <div className="text-muted-foreground flex items-center gap-3">
+                            <Clock className="size-4" />
+                            <p>{formatDate(job.created_at)}</p>
+                          </div>
                         </div>
+                        {!job.jobComplete && (
+                          <div className="border-primary size-5 animate-spin rounded-full border-4 border-t-transparent"></div>
+                        )}
+                        {job.jobComplete && (
+                          <p className="text-primary font-bold">
+                            {job.currentCoverage}%
+                          </p>
+                        )}
                       </div>
-                      {!job.analysisComplete && (
-                        <div className="border-primary size-5 animate-spin rounded-full border-4 border-t-transparent"></div>
-                      )}
-                      {job.analysisComplete && (
-                        <p className="text-primary font-bold">
-                          {job.currentCoverage}%
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           )}
         </Await>

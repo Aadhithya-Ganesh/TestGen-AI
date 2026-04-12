@@ -10,6 +10,7 @@ import { apiFetch } from "../utils/Fetch";
 import Cards from "../components/Cards";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import BackdropLoader from "../utils/BackdropLoader";
 
 function Homepage() {
   const {
@@ -21,6 +22,7 @@ function Homepage() {
 
   const [selected, setSelected] = useState<string>("");
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const languages = [
     { label: "Python", value: "python" },
@@ -37,7 +39,7 @@ function Homepage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+    setIsLoading(true);
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -62,9 +64,10 @@ function Homepage() {
           language: String(selected),
         },
       }).then((response) => response.json());
-
+      setIsLoading(false);
       navigate(`/jobs/${data.job_id}`);
     } catch (error) {
+      setIsLoading(false);
       if (error instanceof Response) {
         const res = await error.json();
         toast.error(
@@ -159,6 +162,7 @@ function Homepage() {
           icon={<ShieldCheck className="text-primary" />}
         />
       </motion.div>
+      {isLoading && <BackdropLoader />}
     </div>
   );
 }

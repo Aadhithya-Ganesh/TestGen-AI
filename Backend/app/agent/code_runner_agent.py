@@ -10,39 +10,105 @@ try:
         model=LiteLlm(model=MODEL_GPT_4_MINI),
         name="code_runner_agent",
         instruction="""
-            You are the Code Runner Agent.
+            You are the Code Runner Agent. You execute the test suite and return coverage results.
 
-            Context:
-            - Container ID: {docker_response}
-            - Analysis results: {code_analysis_response}
+            ## Inputs (from context)
+            - {docker_response}        — container ID
+            - {git_response}           — folder structure (use to locate test and source files)
+            - {code_analysis_response} — project type, test framework, and test file locations
 
-            Your ONLY job:
-            1. Read the test files listed in {code_analysis_response} using read_file
-            2. Run the tests inside the container using exec_command:
-               pytest /app --cov=/app --cov-report=term-missing -v
-            3. Parse the output and return coverage results
+            ## Your tasks, in order
 
-            Make sure to execute the command in the correct directory and with the correct container ID. It should usually be in a folder called /app since that's where the repo is cloned.
-            You have the folder_structure from the git agent. {git_response} to know where the test files are located.
+            ### 1. Run the test suite
+            Use exec_command with the appropriate command for the detected project type:
 
-            Output (STRICT JSON ONLY):
+            Python (pytest):
+                pytest /app --cov=/app --cov-report=json -v
+
+            Node.js (jest):
+                npx jest --coverage --coverageReporters=json --ci
+
+            Java (Maven):
+                mvn test
+
+            Java (Gradle):
+                gradle test jacocoTestReport
+
+            Go:
+                go test ./... -coverprofile=coverage.out -v
+
+            Ruby (RSpec):
+                bundle exec rspec --format documentation
+
+            Run the command from the /app directory (or wherever the repo is mounted — check {git_response}).
+
+            ### 2. Read the coverage report
+            After the test run, read the coverage output file using read_file:
+
+            Python  : coverage.json
+            Node.js : /app/coverage/coverage-summary.json
+            Java    : target/site/jacoco/index.html  or  build/reports/jacoco/test/jacocoTestReport.xml
+            Go      : parse the coverage.out file or run: go tool cover -func=coverage.out
+            Ruby    : parse the RSpec JSON output or SimpleCov report if configured
+
+            If the coverage file does not exist after the run, report coverage as 0% and include the raw
+            command output so the orchestrator can diagnose the issue.
+
+            ### 3. Parse the results
+            Extract:
+            - Overall coverage percentage (0–100)
+            - Number of passed tests
+            - Number of failed tests
+            - Per-file coverage where available
+
+            ## Running tests
+
+            ALWAYS run pytest from inside /app using cd:
+            cd /app && pytest --cov=/app --cov-report=json -v
+
+            NEVER run pytest without cd /app first. If you omit cd /app:
+            - coverage.json gets written to the wrong directory
+            - read_file on /app/coverage.json will fail with "No such file or directory"
+
+            After running, read the coverage file at:
+            /app/coverage.json
+
+            If coverage.json is not found at /app/coverage.json, it means pytest was run
+            from the wrong directory. Do NOT report coverage as 0. Instead re-run with:
+            cd /app && pytest --cov=/app --cov-report=json -v
+
+            ## Tools
+            - exec_command(container_id, command)
+            - read_file(container_id, path)
+
+            ## Output rules for the files array
+            - ONLY include source files — files that contain the actual code being tested
+            - NEVER include test files (test_*.py, *_test.py, *.test.js, *_spec.rb, etc.)
+            - The files array should only contain files whose coverage you WANT to improve
+            - Test files are infrastructure, not targets
+
+            If /app/coverage.json does not exist after running, search for it:
+            find / -name coverage.json -not -path "*/node_modules/*" 2>/dev/null
+
+            Then read it from wherever it was written.
+
+            ## Output (strict JSON, no other text)
             {
-                "coverage": "<percentage>",
-                "passed": <number>,
-                "failed": <number>,
-                "output": "<raw pytest output>"
+            "coverage": "<percentage>",
+            "passed": <number>,
+            "failed": <number>,
+            "output": "<raw pytest output>",
+            "files": [
+                { "filename": "<full path of SOURCE file only>", "coverage": <number> }
+            ]
             }
 
-            Rules:
-            - ALWAYS run pytest with --cov flag
-            - DO NOT modify any files
-            - DO NOT install any packages
-            - ONLY valid JSON, no extra text
-
-            After returning results, ALWAYS transfer back to code_orchestrator_agent.
-            NEVER stop without transferring back.
-            The orchestrator needs your results to finalize the job.
-        """,
+            ## Rules
+            - NEVER modify any source or test files.
+            - NEVER install packages.
+            - ALWAYS read the coverage report file; do not estimate coverage from the raw output alone.
+            - After returning results, control automatically returns to the orchestrator.
+            """,
         description="Runs tests inside the container and returns coverage results.",
         tools=[read_file, exec_command],
         output_key="code_runner_response",

@@ -12,41 +12,33 @@ try:
         model=LiteLlm(model=MODEL_GPT_4_MINI),
         # model=LiteLlm(model=MODEL_GPT_4O), # If you would like to experiment with other models
         name="docker_agent",
-        instruction="""You are a Docker Agent.
+        instruction="""
+            You are the Docker Agent.
 
-            Your ONLY job is to:
-            - choose the correct base image based on language
-            - run a container using the run_container tool
+            Your ONLY job is to spin up a container for the repository to run inside.
 
-            Rules:
-            - ALWAYS call the tool
-            - AFTER running the container, return ONLY the container_id
-            - DO NOT ask questions
-            - DO NOT end the conversation
-            - DO NOT provide explanations
+            ## Task
+            1. Choose the correct base image based on the language provided:
+            - python → python:latest
+            - node   → node:latest
+            - java   → maven:latest
+            - go     → golang:latest
+            - ruby   → ruby:latest
 
-            Output format (STRICT):
+            2. Call run_container with the chosen image and the git_token.
+
+            3. Call update_job with:
+            updates = { "containerCreated": True, "container_id": "<id>" }
+
+            ## Output (STRICT JSON, no other text)
             {
             "container_id": "<id>"
             }
-            
-            Once you finish running the container, use the update_job tool to update the containerCreated field to True.
-            This is the Schema.
 
-            {
-                "job_id": job_id,
-                "user_id": user["github_id"],
-                "repo_url": repo_url,
-                "language": language,
-                "containerCreated": False,
-                "repoCloned": False,
-                "analysisComplete": False,
-                "initialCoverage": None,
-                "currentCoverage": None,
-                "finalCoverage": None,
-                "files": [],
-                "created_at": datetime.now(timezone.utc),
-            }
+            ## Rules
+            - ALWAYS call run_container first, then update_job.
+            - NEVER ask questions or provide explanations.
+            - NEVER proceed without calling both tools.
             """,
         description="Handlers Docker-related tasks with run_container and stop_container tools.",  # Crucial for delegation
         tools=[run_container, update_job],

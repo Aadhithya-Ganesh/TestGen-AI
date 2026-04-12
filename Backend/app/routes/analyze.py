@@ -41,10 +41,13 @@ def analyze(
             "initialCoverage": 0,
             "currentCoverage": 0,
             "finalCoverage": 0,
-            "files": {},
+            "files": [],
             "created_at": datetime.now(timezone.utc),
         }
     )
 
     agent.delay(job_id, repo_url, language, user["github_token"], user["github_id"])  # type: ignore
     return {"message": "Analysis started", "job_id": job_id}
+
+
+

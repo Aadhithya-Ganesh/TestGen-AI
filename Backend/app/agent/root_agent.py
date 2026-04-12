@@ -19,7 +19,7 @@ def create_agent():
     orchestrator_loop = LoopAgent(
         name="orchestrator_loop",
         sub_agents=[code_orchestrator_agent],  # type: ignore
-        max_iterations=5,
+        max_iterations=20,
         description="A loop agent that continuously calls the code orchestrator until stopping conditions are met.",
     )
 
@@ -45,6 +45,7 @@ async def init_session(
         state={
             "code_runner_response": "",  # initialize empty
             "code_modify_response": "",  # initialize empty
+            "docker_response": "",  # initialize empty
         },
     )
     print(
@@ -90,7 +91,7 @@ async def call_agent_async(query: str, runner, user_id, session_id):
     print(f"<<< Agent Response: {final_response_text}")
 
 
-def call_agent(job_id, repo, language, github_token, user_id):
+def call_agent(job_id, repo, language, github_token, user_id, container_id=None):
     agent = create_agent()
     session = asyncio.run(init_session(APP_NAME, USER_ID, SESSION_ID))
 
@@ -100,17 +101,36 @@ def call_agent(job_id, repo, language, github_token, user_id):
         session_service=session,  # Uses our session manager
     )
 
+    git_runner = Runner(
+        agent=git_agent,
+        app_name=APP_NAME,
+        session_service=session,
+    )
+
     print(f"Runner created for agent '{runner.agent.name}'.")
 
     async def run_conversation():
-        await call_agent_async(
-            query=f"This is the job {job_id}: Analyze the repository: {repo} with language: {language}. GitHub token: {github_token}",
-            runner=runner,
-            user_id=USER_ID,
-            session_id=SESSION_ID,
-        )
+        if not container_id:
+            await call_agent_async(
+                query=f"This is the job {job_id}: Analyze the repository: {repo} with language: {language}. GitHub token: {github_token}",
+                runner=runner,
+                user_id=USER_ID,
+                session_id=SESSION_ID,
+            )
+
+        else:
+            await call_agent_async(
+                query=f"This is the job {job_id}. The repo has already been analyzed and the user now wants to create a pull request to the repo {repo}. The repo should be inside the /app inside the container. GitHub token: {github_token}. Container ID: {container_id}",
+                runner=git_runner,
+                user_id=USER_ID,
+                session_id=SESSION_ID,
+            )
+
+        return
 
     try:
         asyncio.run(run_conversation())
     except Exception as e:
         print(f"An error occurred: {e}")
+
+    return
