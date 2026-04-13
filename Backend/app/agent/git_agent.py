@@ -25,7 +25,7 @@ try:
             1. Extract container_id from {docker_response} if available, otherwise from the user query
             2. Call clone_repo with container_id and repo_url
             3. Call generate_folder_structure with container_id and folder_path "/app"
-            4. Call update_job with updates = { "repoCloned": True }
+            4. Call update_job with updates = { "repoCloned": "FAILED" | "SUCCEEDED"}
 
             Output (STRICT JSON, no other text):
             {

@@ -15,7 +15,7 @@ def agent(
     language: str,
     github_token: str,
     user_id: str,
-    container_id: str,
+    container_id: str = None,  # type: ignore
 ):
     call_agent(job_id, repo, language, github_token, user_id, container_id)  # type: ignore
     return

@@ -2,10 +2,25 @@ import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState, useRef } from "react";
 import { apiFetch } from "../utils/Fetch";
-import { CheckCircle, GitPullRequest } from "lucide-react";
+import { CheckCircle, GitPullRequest, XCircle, Loader2 } from "lucide-react";
 import DiffViewer from "../components/DiffViewer";
-import Button from "../components/ui/Button";
 import { toast } from "sonner";
+
+type Status = "IN-PROGRESS" | "FAILED" | "SUCCEEDED" | null;
+
+const StatusIcon = ({ status }: { status: Status }) => {
+  if (status === "SUCCEEDED")
+    return (
+      <CheckCircle className="text-primary animate-in fade-in zoom-in h-5 w-5 duration-300" />
+    );
+  if (status === "FAILED")
+    return (
+      <XCircle className="animate-in fade-in zoom-in h-5 w-5 text-red-500 duration-300" />
+    );
+  return (
+    <div className="border-primary size-5 animate-spin rounded-full border-4 border-t-transparent" />
+  );
+};
 
 function Job() {
   const { jobId } = useParams();
@@ -27,7 +42,9 @@ function Job() {
         const data = await res.json();
         setJob(data);
 
-        if (data.jobComplete && interval) {
+        const done =
+          data.jobComplete === "SUCCEEDED" || data.jobComplete === "FAILED";
+        if (done && interval) {
           clearInterval(interval);
           interval = null;
         }
@@ -38,7 +55,6 @@ function Job() {
 
     fetchJob();
     interval = setInterval(fetchJob, 2000);
-
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -46,22 +62,20 @@ function Job() {
 
   // ⏱️ Delay transition after repo is cloned
   useEffect(() => {
-    if (job?.repoCloned) {
+    if (job?.repoCloned === "SUCCEEDED") {
       const timer = setTimeout(() => setShowDetails(true), 2000);
       return () => clearTimeout(timer);
     }
   }, [job?.repoCloned]);
 
-  // 🔁 PR polling — starts after button click, stops when prCreated is true
+  // 🔁 PR polling
   const startPrPolling = () => {
     if (prPollRef.current) return;
-
     prPollRef.current = setInterval(async () => {
       try {
         const res = await apiFetch(`/api/jobs/${jobId}`);
         const data = await res.json();
         setJob(data);
-
         if (data.prCreated) {
           clearInterval(prPollRef.current!);
           prPollRef.current = null;
@@ -74,7 +88,6 @@ function Job() {
     }, 2000);
   };
 
-  // Cleanup PR poll on unmount
   useEffect(() => {
     return () => {
       if (prPollRef.current) clearInterval(prPollRef.current);
@@ -92,7 +105,6 @@ function Job() {
         toast.error("Failed to create pull request.");
         return;
       }
-      // Start polling for prCreated
       startPrPolling();
     } catch (err) {
       console.error(err);
@@ -110,6 +122,8 @@ function Job() {
     return "bg-green-500";
   };
 
+  const jobComplete = job?.jobComplete === "SUCCEEDED";
+  const jobFailed = job?.jobComplete === "FAILED";
   const prDone = job?.prCreated;
 
   return (
@@ -124,21 +138,21 @@ function Job() {
             className="flex flex-col gap-10"
           >
             {/* Header */}
-            <div>
-              <div className="bg-card border-border flex items-center justify-between rounded-2xl border p-8">
-                <div>
-                  <p className="text-xl font-bold">{job?.repo_url}</p>
-                  <p className="tracking-widest">
-                    {job?.language.toUpperCase()}
-                  </p>
-                </div>
-                <div>
-                  {job?.jobComplete ? (
-                    <CheckCircle className="h-8 w-8 text-green-500" />
-                  ) : (
-                    <div className="border-primary size-8 animate-spin rounded-full border-4 border-t-transparent"></div>
-                  )}
-                </div>
+            <div className="bg-card border-border flex items-center justify-between rounded-2xl border p-8">
+              <div>
+                <p className="text-xl font-bold">{job?.repo_url}</p>
+                <p className="tracking-widest">
+                  {job?.language?.toUpperCase()}
+                </p>
+              </div>
+              <div>
+                {jobComplete && (
+                  <CheckCircle className="h-8 w-8 text-green-500" />
+                )}
+                {jobFailed && <XCircle className="h-8 w-8 text-red-500" />}
+                {!jobComplete && !jobFailed && (
+                  <div className="border-primary size-8 animate-spin rounded-full border-4 border-t-transparent" />
+                )}
               </div>
             </div>
 
@@ -149,8 +163,8 @@ function Job() {
                 <div className="bg-card border-border rounded-2xl border p-6">
                   <p className="text-3xl font-bold">
                     {job?.finalCoverage == 0
-                      ? `${job?.currentCoverage}`
-                      : `${job?.finalCoverage}`}
+                      ? job?.currentCoverage
+                      : job?.finalCoverage}
                   </p>
                   <p className="text-muted-foreground mt-2 text-sm">
                     {job?.finalCoverage == 0
@@ -211,7 +225,7 @@ function Job() {
             <DiffViewer tests={job?.tests || []} />
 
             {/* PR Button */}
-            {job?.jobComplete && (
+            {jobComplete && (
               <div className="flex flex-col gap-3">
                 {prDone ? (
                   <div className="bg-card border-border flex items-center justify-between rounded-2xl border p-6">
@@ -254,7 +268,7 @@ function Job() {
                     <div className="flex items-center gap-3">
                       <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
                         {prLoading ? (
-                          <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
+                          <Loader2 className="text-primary h-5 w-5 animate-spin" />
                         ) : (
                           <GitPullRequest className="text-primary h-5 w-5" />
                         )}
@@ -279,6 +293,21 @@ function Job() {
                 )}
               </div>
             )}
+
+            {/* Failed state */}
+            {jobFailed && (
+              <div className="bg-card border-border flex items-center gap-3 rounded-2xl border p-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
+                  <XCircle className="h-5 w-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Job Failed</p>
+                  <p className="text-muted-foreground text-xs">
+                    Something went wrong during test generation
+                  </p>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -298,19 +327,11 @@ function Job() {
               <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
                   <p>Creating Sandbox Environment</p>
-                  {!job?.containerCreated ? (
-                    <div className="border-primary size-5 animate-spin rounded-full border-4 border-t-transparent"></div>
-                  ) : (
-                    <CheckCircle className="text-primary animate-in fade-in zoom-in h-5 w-5 duration-300" />
-                  )}
+                  <StatusIcon status={job?.containerCreated} />
                 </div>
                 <div className="flex items-center justify-between">
                   <p>Cloning Repo</p>
-                  {!job?.repoCloned ? (
-                    <div className="border-primary size-5 animate-spin rounded-full border-4 border-t-transparent"></div>
-                  ) : (
-                    <CheckCircle className="text-primary animate-in fade-in zoom-in h-5 w-5 duration-300" />
-                  )}
+                  <StatusIcon status={job?.repoCloned} />
                 </div>
               </div>
             </div>

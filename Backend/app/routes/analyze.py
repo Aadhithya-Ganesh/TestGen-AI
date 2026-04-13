@@ -35,19 +35,19 @@ def analyze(
             "user_id": user["github_id"],
             "repo_url": f"{user['username']}/{repo_name}",
             "language": language,
-            "containerCreated": False,
-            "repoCloned": False,
-            "analysisComplete": False,
+            "containerCreated": "IN_PROGRESS",
+            "repoCloned": "IN_PROGRESS",
+            "analysisComplete": "IN_PROGRESS",
             "initialCoverage": 0,
             "currentCoverage": 0,
             "finalCoverage": 0,
             "files": [],
             "created_at": datetime.now(timezone.utc),
+            "container_id": None,
+            "tests": [],
+            "job_status": "IN_PROGRESS",
         }
     )
 
     agent.delay(job_id, repo_url, language, user["github_token"], user["github_id"])  # type: ignore
     return {"message": "Analysis started", "job_id": job_id}
-
-
-

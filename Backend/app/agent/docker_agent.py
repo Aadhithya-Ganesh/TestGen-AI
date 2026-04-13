@@ -28,7 +28,7 @@ try:
             2. Call run_container with the chosen image and the git_token.
 
             3. Call update_job with:
-            updates = { "containerCreated": True, "container_id": "<id>" }
+            updates = { "containerCreated": "FAILED" | "SUCCEEDED", "container_id": "<id>" }
 
             ## Output (STRICT JSON, no other text)
             {

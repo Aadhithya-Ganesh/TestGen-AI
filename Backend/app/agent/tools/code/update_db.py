@@ -32,14 +32,14 @@ def update_job(
         Fields to set directly on the job document. Supports any top-level
         job field, for example:
             {
-                "containerCreated": True,
+                "containerCreated": "IN-PROGRESS" | "FAILED" | "SUCCEEDED",
                 "container_id": "1d510f697245",
-                "repoCloned": True,
-                "analysisComplete": True,
+                "repoCloned": "IN-PROGRESS" | "FAILED" | "SUCCEEDED",
+                "analysisComplete": "IN-PROGRESS" | "FAILED" | "SUCCEEDED",
                 "initialCoverage": "20.9",   # set ONCE, never overwrite
                 "currentCoverage": "74.5",
                 "finalCoverage": "100.0",    # set only when loop ends
-                "jobComplete": True          # set only when loop ends
+                "jobComplete": "IN-PROGRESS" | "FAILED" | "SUCCEEDED" # set only when loop ends
             }
 
     upsert_files : list, optional
