@@ -122,8 +122,6 @@ The control loop that owns the overall strategy. It calls the analysis agent fir
 - **pytest + pytest-cov** — Python testing and coverage
 - **JUnit 5 + JaCoCo** — Java testing and coverage
 - **Jest + Istanbul** — Node.js testing and coverage
-- **Go testing + cover** — native Go testing
-- **RSpec + SimpleCov** — Ruby testing
 
 ### Git & Version Control
 
