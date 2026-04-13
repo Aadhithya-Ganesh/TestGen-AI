@@ -1,7 +1,13 @@
 import { CircleCheck } from "lucide-react";
 import { motion } from "framer-motion";
 
-function CustomCheckbox({ checked, onChange, label }) {
+interface CustomCheckboxProps {
+  checked: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  label: string;
+}
+
+function CustomCheckbox({ checked, onChange, label }: CustomCheckboxProps) {
   return (
     <label className="flex cursor-pointer items-center gap-2">
       {/* Hidden real checkbox */}

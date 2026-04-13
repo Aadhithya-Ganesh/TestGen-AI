@@ -42,6 +42,7 @@ const ErrorPage = () => {
     <div className="bg-background flex min-h-screen items-center justify-center">
       <div className="max-w-md text-center">
         <h1 className="text-foreground mb-4 text-5xl font-bold">{status}</h1>
+        <h1 className="text-foreground mb-4 text-5xl font-bold">{title}</h1>
         <p className="text-muted-foreground mb-6 text-xl">{message}</p>
 
         <Link

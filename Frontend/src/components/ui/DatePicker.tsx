@@ -2,19 +2,27 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
+interface DatePickerProps {
+  value?: string;
+  onChange: (date: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  size?: "sm" | "md" | "lg";
+}
+
 function DatePicker({
   value,
   onChange,
   placeholder = "Select date",
   disabled = false,
   size = "md",
-}) {
+}: DatePickerProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth());
-  const [year, setYear] = useState(today.getFullYear());
+  const [year] = useState(today.getFullYear());
 
   const sizeClasses = {
     sm: "text-sm px-3 py-2",
@@ -24,8 +32,8 @@ function DatePicker({
 
   // close on outside click
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
@@ -40,7 +48,7 @@ function DatePicker({
   for (let i = 0; i < firstDay; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
-  const handleSelect = (day) => {
+  const handleSelect = (day: number | undefined) => {
     const selected = new Date(year, month, day);
     onChange(selected.toISOString().split("T")[0]);
     setOpen(false);

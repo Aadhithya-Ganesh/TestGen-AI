@@ -1,4 +1,18 @@
-function DropdownItem({ icon: Icon, label, danger = false, onClick }) {
+import type { ComponentType } from "react";
+
+interface DropdownItemProps {
+  icon: ComponentType<{ size: number }>;
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+}
+
+function DropdownItem({
+  icon: Icon,
+  label,
+  danger = false,
+  onClick,
+}: DropdownItemProps) {
   return (
     <button
       onClick={onClick}

@@ -1,5 +1,14 @@
 import { motion } from "framer-motion";
 
+interface SwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  size?: "sm" | "md" | "lg";
+  disabled?: boolean;
+  onColor?: string;
+  offColor?: string;
+}
+
 export default function Switch({
   checked,
   onChange,
@@ -7,7 +16,7 @@ export default function Switch({
   disabled = false,
   onColor = "bg-primary",
   offColor = "bg-background",
-}) {
+}: SwitchProps) {
   const sizes = {
     sm: { track: "w-9 h-5", knob: "w-4 h-4" },
     md: { track: "w-12 h-6", knob: "w-5 h-5" },

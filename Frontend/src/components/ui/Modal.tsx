@@ -2,7 +2,17 @@ import { X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 
-export default function Modal({ open, onClose, heading, children }) {
+export default function Modal({
+  open,
+  onClose,
+  heading,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  heading: string;
+  children: React.ReactNode;
+}) {
   return createPortal(
     <AnimatePresence>
       {open && (

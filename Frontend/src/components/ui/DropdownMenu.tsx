@@ -1,16 +1,29 @@
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
-function DropdownMenu({ open, onClose, children, triggerRef }) {
-  const menuRef = useRef(null);
+interface DropdownMenuProps {
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+  triggerRef: React.RefObject<HTMLElement> | undefined;
+}
+
+function DropdownMenu({
+  open,
+  onClose,
+  children,
+  triggerRef,
+}: DropdownMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(e) {
+    function handleClickOutside(e: MouseEvent) {
       if (
         menuRef.current &&
-        !menuRef.current.contains(e.target) &&
+        !menuRef.current.contains(e.target as Node) &&
         triggerRef?.current &&
-        !triggerRef.current.contains(e.target)
+        !triggerRef.current.contains(e.target as Node)
       ) {
         onClose();
       }

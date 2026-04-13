@@ -1,7 +1,7 @@
 import Logo from "./Logo.tsx";
 import Navigation from "./../components/Navigation.tsx";
 import { FaGithub } from "react-icons/fa";
-import { LogOut, User } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRef, useState } from "react";
 import DropdownMenu from "./ui/DropdownMenu.tsx";
@@ -12,7 +12,7 @@ function Navbar({ user }: { user: any }) {
   const navigate = useNavigate();
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const triggerRef = useRef(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const handleLogin = () => {
     window.location.assign(
@@ -49,7 +49,7 @@ function Navbar({ user }: { user: any }) {
           <DropdownMenu
             open={userMenuOpen}
             onClose={() => setUserMenuOpen(false)}
-            triggerRef={triggerRef}
+            triggerRef={triggerRef as React.RefObject<HTMLElement>}
           >
             <div className="px-4 py-3">
               <div className="flex items-center gap-3">

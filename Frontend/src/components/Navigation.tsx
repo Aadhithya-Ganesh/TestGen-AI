@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { GalleryHorizontalEnd, Home, LayoutDashboard } from "lucide-react";
+import { GalleryHorizontalEnd, Home } from "lucide-react";
 
 function Navigation() {
   const navItems = [

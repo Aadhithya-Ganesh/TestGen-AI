@@ -1,6 +1,13 @@
 import { motion } from "motion/react";
+import type { ComponentType } from "react";
 
-function NothingYet({ icon: Icon, heading, description }) {
+interface NothingYetProps {
+  icon: ComponentType<{ className?: string }>;
+  heading: string;
+  description: string;
+}
+
+function NothingYet({ icon: Icon, heading, description }: NothingYetProps) {
   return (
     <motion.div
       className="py-12 text-center"
